@@ -25,30 +25,29 @@
 #include "lora.h"
 #include "msp_library.h"
 #include "uav_node.h"
+#include "runtime_state.h"
 
 #ifdef ARDUINO_ESP32_DEV
-    #define LORA_SS_PIN     18
-    #define LORA_RST_PIN    14
-    #define LORA_DI0_PIN    26
+#define LORA_SS_PIN 18
+#define LORA_RST_PIN 14
+#define LORA_DI0_PIN 26
 
-    #define SPI_SCK_PIN     5
-    #define SPI_MISO_PIN    19
-    #define SPI_MOSI_PIN    27
-    #define SPI_FREQUENCY 4E6
+#define SPI_SCK_PIN 5
+#define SPI_MISO_PIN 19
+#define SPI_MOSI_PIN 27
+#define SPI_FREQUENCY 4E6
 
-    #define BUTTON_PIN          0
+#define BUTTON_PIN 0
 
-    #define MPS_PORT_RX_PIN     23
-    #define MPS_PORT_TX_PIN     17
-    
-    #define OLED_RESET_PIN      16
-    #define OLED_SDA_PIN        4
-    #define OLED_SCL_PIN        15
+#define MPS_PORT_RX_PIN 23
+#define MPS_PORT_TX_PIN 17
+
+#define OLED_RESET_PIN 16
+#define OLED_SDA_PIN 4
+#define OLED_SCL_PIN 15
 #else
-    #error please select hardware
+#error please select hardware
 #endif
-
-
 
 SSD1306 display(0x3c, 4, 15);
 OledDisplay oledDisplay(&display);
@@ -77,10 +76,11 @@ HardwareSerial mspSerial(2);
 MSPLibrary msp;
 UAVNode uavNode;
 
-void onQspSuccess(uint8_t receivedChannel) {
+void onQspSuccess(uint8_t receivedChannel)
+{
     //If recide received a valid frame, that means it can start to talk
     radioNode.lastReceivedChannel = receivedChannel;
-    
+
     radioNode.readRssi();
     radioNode.readSnr();
 
@@ -88,7 +88,7 @@ void onQspSuccess(uint8_t receivedChannel) {
     beaconId += qsp.payload[2] << 16;
     beaconId += qsp.payload[1] << 8;
     beaconId += qsp.payload[0];
-    
+
     Beacon *beacon = beacons.getBeacon(beaconId);
 
     /*
@@ -98,7 +98,8 @@ void onQspSuccess(uint8_t receivedChannel) {
     beacon->setSnr(radioNode.snr);
     beacon->setLastContactMillis(millis());
 
-    if (qsp.frameId == QSP_FRAME_COORDS) {
+    if (qsp.frameId == QSP_FRAME_COORDS)
+    {
         long tmp;
 
         tmp = qsp.payload[4];
@@ -117,8 +118,8 @@ void onQspSuccess(uint8_t receivedChannel) {
     }
 }
 
-void onQspFailure() {
-
+void onQspFailure()
+{
 }
 
 void setup()
@@ -153,6 +154,9 @@ void setup()
     oledDisplay.setPage(OLED_PAGE_BEACON_LIST);
 
     button.start();
+
+    ENABLE_STATE(RUNTIME_STATE_RADIO_LISTEN);
+    ENABLE_STATE(RUNTIME_STATE_MSP_POLL_DATA);
 }
 
 void loop()
@@ -161,37 +165,51 @@ void loop()
 
     radioNode.handleTxDoneState(false);
 
-    if (nextMspReadTaskTs < millis()) {
-        MSP_RAW_GPS_t mspData;
-        if (msp.request(MSP_RAW_GPS, &mspData, sizeof(mspData))) {
-            uavNode.lat = mspData.lat / 10000000.0f;
-            uavNode.lon = mspData.lon / 10000000.0f;
-            uavNode.alt = mspData.alt;
-            uavNode.fixType = mspData.fixType;
-            uavNode.sats = mspData.numSat;
-            uavNode.groundSpeed = mspData.groundSpeed;
-            uavNode.groundCourse = mspData.groundCourse;
-            uavNode.hdop = uavNode.hdop;
-            uavNode.lastContact = millis();
-            lastMspCommunicationTs = millis();
+    if (STATE(RUNTIME_STATE_MSP_POLL_DATA))
+    {
+        if (nextMspReadTaskTs < millis())
+        {
+            MSP_RAW_GPS_t mspData;
+            if (msp.request(MSP_RAW_GPS, &mspData, sizeof(mspData)))
+            {
+                uavNode.lat = mspData.lat / 10000000.0f;
+                uavNode.lon = mspData.lon / 10000000.0f;
+                uavNode.alt = mspData.alt;
+                uavNode.fixType = mspData.fixType;
+                uavNode.sats = mspData.numSat;
+                uavNode.groundSpeed = mspData.groundSpeed;
+                uavNode.groundCourse = mspData.groundCourse;
+                uavNode.hdop = uavNode.hdop;
+                uavNode.lastContact = millis();
+                lastMspCommunicationTs = millis();
+            }
+
+            nextMspReadTaskTs = millis() + TASK_MSP_READ_MS;
         }
 
-        nextMspReadTaskTs = millis() + TASK_MSP_READ_MS; 
+        /*
+        * Recovery routine for MSP serial port
+        */
+        if (millis() - lastMspCommunicationTs > MSP_PORT_RECOVERY_THRESHOLD)
+        {
+            msp.reset();
+        }
     }
 
-    /*
-     * Recovery routine for MSP serial port
-     */
-    if (millis() - lastMspCommunicationTs > MSP_PORT_RECOVERY_THRESHOLD) {
-        msp.reset();
-    }
-
-    if (radioNode.radioState != RADIO_STATE_TX && nextLoRaReadTaskTs < millis()) {
+    if (radioNode.radioState != RADIO_STATE_TX && nextLoRaReadTaskTs < millis())
+    {
         int packetSize = LoRa.parsePacket();
-        if (packetSize) {
-            Serial.println("incoming");
+        if (packetSize)
+        {
             radioNode.bytesToRead = packetSize;
-            radioNode.readAndDecode(&qsp, bindKey);
+
+            if (STATE(RUNTIME_STATE_RADIO_LISTEN)) {
+                radioNode.readAndDecode(&qsp, bindKey);
+            } else {
+                //Just flush the data from the buffer
+                LoRa.sleep();
+                LoRa.receive();
+            }
         }
 
         nextLoRaReadTaskTs = millis() + TASK_LORA_READ_MS;
@@ -202,12 +220,13 @@ void loop()
      */
     if (
         qsp.protocolState != QSP_STATE_IDLE &&
-        qsp.frameDecodingStartedAt + QSP_MAX_FRAME_DECODE_TIME < millis()
-    ) {
+        qsp.frameDecodingStartedAt + QSP_MAX_FRAME_DECODE_TIME < millis())
+    {
         qsp.protocolState = QSP_STATE_IDLE;
     }
 
-    if (currentBeaconIndex == -1 && beacons.count() > 0) {
+    if (currentBeaconIndex == -1 && beacons.count() > 0)
+    {
         currentBeaconIndex = 0;
         currentBeaconId = beacons.get(currentBeaconIndex)->getId();
     }
