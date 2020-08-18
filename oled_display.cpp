@@ -1,6 +1,7 @@
 #include "oled_display.h"
 #include "Arduino.h"
 #include "beacons.h"
+#include "runtime_state.h"
 
 OledDisplay::OledDisplay(SSD1306 *display) {
     _display = display;
@@ -72,6 +73,18 @@ void OledDisplay::renderPageBeaconList() {
         }
 
         _display->drawString(70, 20, "T: -" + contactString);
+
+        if (STATE(RUNTIME_STATE_BEACON_LOCKED)) {   
+            _display->drawString(0, 20, "Locked");
+        } else {
+            _display->drawString(0, 20, "Select beacon");
+        }
+
+        if (STATE(RUNTIME_STATE_SET_WAYPOINT)) {   
+            _display->drawString(0, 34, "MSP command SET_WP");
+        } else {
+            _display->drawString(0, 34, "MSP command IDLE");
+        }
 
         // if (beacon->hasPos() && gps.satellites.value() > 5) {
         //     _display->setFont(ArialMT_Plain_16);

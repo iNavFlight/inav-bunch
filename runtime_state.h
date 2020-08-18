@@ -26,6 +26,7 @@ typedef enum {
     RUNTIME_STATE_RADIO_LISTEN      = (1 << 0),
     RUNTIME_STATE_MSP_POLL_DATA     = (1 << 1),
     RUNTIME_STATE_SET_WAYPOINT      = (1 << 2),
+    RUNTIME_STATE_BEACON_LOCKED     = (1 << 3),
 } DeviceState_e;
 
 #define DISABLE_STATE(mask) (runtimeState &= ~(mask))

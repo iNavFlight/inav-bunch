@@ -231,5 +231,23 @@ void loop()
         currentBeaconId = beacons.get(currentBeaconIndex)->getId();
     }
 
+    if (!STATE(RUNTIME_STATE_BEACON_LOCKED)) {
+        if (button.getState() == TACTILE_STATE_LONG_PRESS) {
+            ENABLE_STATE(RUNTIME_STATE_BEACON_LOCKED);
+            DISABLE_STATE(RUNTIME_STATE_SET_WAYPOINT);
+        }
+    } else {
+        if (button.getState() == TACTILE_STATE_LONG_PRESS) {
+            DISABLE_STATE(RUNTIME_STATE_BEACON_LOCKED);
+            DISABLE_STATE(RUNTIME_STATE_SET_WAYPOINT);
+        } else if (button.getState() == TACTILE_STATE_SHORT_PRESS) {
+            if (!STATE(RUNTIME_STATE_SET_WAYPOINT)) {
+                ENABLE_STATE(RUNTIME_STATE_SET_WAYPOINT);
+            } else {
+                DISABLE_STATE(RUNTIME_STATE_SET_WAYPOINT);
+            }
+        }
+    }
+
     oledDisplay.loop();
 }
