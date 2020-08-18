@@ -1,4 +1,4 @@
-/* 
+/** 
  * This file is part of the INAV Bunch https://github.com/iNavFlight/inav-bunch 
  * Copyright (c) 2020 Pawel Spychalski pspychalski@gmail.com
  * 
@@ -23,6 +23,8 @@
 #include "beacons.h"
 #include "oled_display.h"
 #include "lora.h"
+#include "msp_library.h"
+#include "uav_node.h"
 
 #ifdef ARDUINO_ESP32_DEV
     #define LORA_SS_PIN     18
@@ -32,12 +34,21 @@
     #define SPI_SCK_PIN     5
     #define SPI_MISO_PIN    19
     #define SPI_MOSI_PIN    27
+    #define SPI_FREQUENCY 4E6
+
+    #define BUTTON_PIN          0
+
+    #define MPS_PORT_RX_PIN     23
+    #define MPS_PORT_TX_PIN     17
+    
+    #define OLED_RESET_PIN      16
+    #define OLED_SDA_PIN        4
+    #define OLED_SCL_PIN        15
 #else
     #error please select hardware
 #endif
 
-#define PIN_BUTTON 0
-#define TASK_LORA_READ 2 // We check for new packets only from time to time, no need to do it more often
+
 
 SSD1306 display(0x3c, 4, 15);
 OledDisplay oledDisplay(&display);
@@ -48,13 +59,23 @@ uint8_t bindKey[4] = {0x13, 0x27, 0x42, 0x07};
 
 Beacons beacons;
 
-QmuTactile button(PIN_BUTTON);
+QmuTactile button(BUTTON_PIN);
 
 uint32_t nextLoRaReadTaskTs = 0;
+uint32_t nextMspReadTaskTs = 0;
+
 uint32_t currentBeaconId = 0;
 int8_t currentBeaconIndex = -1;
 
-HardwareSerial MspSerial(1);
+#define TASK_LORA_READ_MS 2
+#define TASK_MSP_READ_MS 200
+
+#define MSP_PORT_RECOVERY_THRESHOLD (TASK_MSP_READ_MS * 5)
+uint32_t lastMspCommunicationTs = 0;
+
+HardwareSerial mspSerial(2);
+MSPLibrary msp;
+UAVNode uavNode;
 
 void onQspSuccess(uint8_t receivedChannel) {
     //If recide received a valid frame, that means it can start to talk
@@ -102,19 +123,18 @@ void onQspFailure() {
 
 void setup()
 {
-    MspSerial.begin(115200, SERIAL_8N1, 32, 33);
+    msp.begin(mspSerial, 500);
+    mspSerial.begin(115200, SERIAL_8N1, MPS_PORT_RX_PIN, MPS_PORT_TX_PIN, false, 1000L);
+
     Serial.begin(115200);
     /*
      * Setup OLED display
      */
-    pinMode(16, OUTPUT);
-    digitalWrite(16, LOW); // set GPIO16 low to reset OLED
+    pinMode(OLED_RESET_PIN, OUTPUT);
+    digitalWrite(OLED_RESET_PIN, LOW); // set GPIO16 low to reset OLED
     delay(50);
-    digitalWrite(16, HIGH); // while OLED is running, must set GPIO16 to high
-    Wire.begin(4, 15);
-    display.init();
-    display.flipScreenVertically();
-    display.setFont(ArialMT_Plain_10);
+    digitalWrite(OLED_RESET_PIN, HIGH); // while OLED is running, must set GPIO16 to high
+    Wire.begin(OLED_SDA_PIN, OLED_SCL_PIN);
 
     qsp.onSuccessCallback = onQspSuccess;
     qsp.onFailureCallback = onQspFailure;
@@ -123,7 +143,7 @@ void setup()
      * Radio setup
      */
     SPI.begin(SPI_SCK_PIN, SPI_MISO_PIN, SPI_MOSI_PIN, LORA_SS_PIN);
-    LoRa.setSPIFrequency(4E6);
+    LoRa.setSPIFrequency(SPI_FREQUENCY);
     radioNode.init(LORA_SS_PIN, LORA_RST_PIN, LORA_DI0_PIN, NULL);
     radioNode.reset();
     radioNode.canTransmit = true;
@@ -141,6 +161,31 @@ void loop()
 
     radioNode.handleTxDoneState(false);
 
+    if (nextMspReadTaskTs < millis()) {
+        MSP_RAW_GPS_t mspData;
+        if (msp.request(MSP_RAW_GPS, &mspData, sizeof(mspData))) {
+            uavNode.lat = mspData.lat / 10000000.0f;
+            uavNode.lon = mspData.lon / 10000000.0f;
+            uavNode.alt = mspData.alt;
+            uavNode.fixType = mspData.fixType;
+            uavNode.sats = mspData.numSat;
+            uavNode.groundSpeed = mspData.groundSpeed;
+            uavNode.groundCourse = mspData.groundCourse;
+            uavNode.hdop = uavNode.hdop;
+            uavNode.lastContact = millis();
+            lastMspCommunicationTs = millis();
+        }
+
+        nextMspReadTaskTs = millis() + TASK_MSP_READ_MS; 
+    }
+
+    /*
+     * Recovery routine for MSP serial port
+     */
+    if (millis() - lastMspCommunicationTs > MSP_PORT_RECOVERY_THRESHOLD) {
+        msp.reset();
+    }
+
     if (radioNode.radioState != RADIO_STATE_TX && nextLoRaReadTaskTs < millis()) {
         int packetSize = LoRa.parsePacket();
         if (packetSize) {
@@ -149,7 +194,7 @@ void loop()
             radioNode.readAndDecode(&qsp, bindKey);
         }
 
-        nextLoRaReadTaskTs = millis() + TASK_LORA_READ;
+        nextLoRaReadTaskTs = millis() + TASK_LORA_READ_MS;
     }
 
     /*

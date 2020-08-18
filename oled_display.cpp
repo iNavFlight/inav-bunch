@@ -8,7 +8,6 @@ OledDisplay::OledDisplay(SSD1306 *display) {
 
 void OledDisplay::init() {
     _display->init();
-    _display->flipScreenVertically();
     _display->setFont(ArialMT_Plain_10);
 }
 
@@ -95,15 +94,23 @@ void OledDisplay::renderPageBeaconList() {
         //     _display->drawString(0, 34, "No distance");
         // }
 
-        _display->setFont(ArialMT_Plain_10);
-        _display->drawString(0, 54, String(beacon->getLat(), 5));
-        _display->drawString(64, 54, String(beacon->getLon(), 5));
+        // _display->setFont(ArialMT_Plain_10);
+        // _display->drawString(0, 54, String(beacon->getLat(), 5));
+        // _display->drawString(64, 54, String(beacon->getLon(), 5));
 
 
     } else {
         _display->setFont(ArialMT_Plain_16);
 
-        _display->drawString(0, 32, "No beacons");
+        _display->drawString(0, 12, "No beacons");
+    }
+
+    if (uavNode.isValid()) {
+        _display->setFont(ArialMT_Plain_10);
+        _display->drawString(0, 48, "UAV: OK");
+    } else {
+        _display->setFont(ArialMT_Plain_10);
+        _display->drawString(0, 48, "UAV: -");
     }
 
     _display->display();

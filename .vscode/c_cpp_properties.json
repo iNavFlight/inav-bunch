@@ -7,7 +7,10 @@
             ],
             "forcedInclude": [],
             "intelliSenseMode": "msvc-x64",
-            "cStandard": "gnu11"
+            "cStandard": "gnu11",
+            "defines": [
+                "ARDUINO_ESP32_DEV"
+            ]
         }
     ],
     "version": 4

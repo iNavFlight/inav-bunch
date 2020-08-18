@@ -4,6 +4,7 @@
 #include "SSD1306.h"
 #include <TinyGPS++.h>
 #include "beacons.h"
+#include "uav_node.h"
 
 enum txOledPages {
     OLED_PAGE_NONE,
@@ -18,13 +19,13 @@ enum txOledPages {
 extern Beacons beacons;
 extern int8_t currentBeaconIndex;
 extern uint32_t currentBeaconId;
+extern UAVNode uavNode;
 
 class OledDisplay {
     public:
         OledDisplay(SSD1306 *display);
         void init();
         void loop();
-        
         void setPage(uint8_t page);
     private:
         SSD1306 *_display;
