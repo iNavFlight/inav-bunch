@@ -169,17 +169,29 @@ void loop()
     {
         if (nextMspReadTaskTs < millis())
         {
-            MSP_RAW_GPS_t mspData;
-            if (msp.request(MSP_RAW_GPS, &mspData, sizeof(mspData)))
+            MSP_RAW_GPS_t mspRawGsp;
+            if (msp.request(MSP_RAW_GPS, &mspRawGsp, sizeof(mspRawGsp)))
             {
-                uavNode.lat = mspData.lat / 10000000.0f;
-                uavNode.lon = mspData.lon / 10000000.0f;
-                uavNode.alt = mspData.alt;
-                uavNode.fixType = mspData.fixType;
-                uavNode.sats = mspData.numSat;
-                uavNode.groundSpeed = mspData.groundSpeed;
-                uavNode.groundCourse = mspData.groundCourse;
-                uavNode.hdop = uavNode.hdop;
+                uavNode.lat = mspRawGsp.lat / 10000000.0f;
+                uavNode.lon = mspRawGsp.lon / 10000000.0f;
+                uavNode.alt = mspRawGsp.alt;
+                uavNode.fixType = mspRawGsp.fixType;
+                uavNode.sats = mspRawGsp.numSat;
+                uavNode.groundSpeed = mspRawGsp.groundSpeed;
+                uavNode.groundCourse = mspRawGsp.groundCourse;
+                uavNode.hdop = mspRawGsp.hdop;\
+
+                uavNode.lastContact = millis();
+                lastMspCommunicationTs = millis();
+            }
+
+            MSP_STATUS_EX_t mspStatusEx;
+            if (msp.request(MSP_STATUS_EX, &mspStatusEx, sizeof(mspStatusEx)))
+            {
+                uavNode.armingFlags = mspStatusEx.armingFlags;
+                uavNode.flightModes = mspStatusEx.flightModes;
+                uavNode.sensorStatus = mspStatusEx.sensorStatus;
+
                 uavNode.lastContact = millis();
                 lastMspCommunicationTs = millis();
             }
@@ -247,6 +259,11 @@ void loop()
                 DISABLE_STATE(RUNTIME_STATE_SET_WAYPOINT);
             }
         }
+    }
+
+    if (beacons.count() == 0) {
+        DISABLE_STATE(RUNTIME_STATE_BEACON_LOCKED);
+        DISABLE_STATE(RUNTIME_STATE_SET_WAYPOINT);
     }
 
     oledDisplay.loop();

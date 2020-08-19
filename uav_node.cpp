@@ -24,3 +24,21 @@ UAVNode::UAVNode(void) {
 bool UAVNode::isValid(void) {
     return (millis() - lastContact < 1000) && lastContact > 0;
 }
+
+bool UAVNode::isArmed(void) {
+    return _armingState(ARMED);
+}
+
+String UAVNode::gpsFix(void) {
+    if (fixType == GPS_FIX_2D) {
+        return "2D";
+    } else if (fixType == GPS_FIX_3D) {
+        return "3D";
+    } else {
+        return "NO";
+    }
+}
+
+bool UAVNode::_armingState(uint32_t mask) {
+    return (armingFlags & (mask));
+}

@@ -118,12 +118,17 @@ void OledDisplay::renderPageBeaconList() {
         _display->drawString(0, 12, "No beacons");
     }
 
+    _display->setFont(ArialMT_Plain_10);
     if (uavNode.isValid()) {
-        _display->setFont(ArialMT_Plain_10);
-        _display->drawString(0, 48, "UAV: OK");
+        _display->drawString(0, 48, "UAV OK");
     } else {
-        _display->setFont(ArialMT_Plain_10);
-        _display->drawString(0, 48, "UAV: -");
+        _display->drawString(0, 48, "UAV -");
+    }
+
+    _display->drawString(48, 48, "GPS " + uavNode.gpsFix());
+
+    if (uavNode.isArmed()) {
+        _display->drawString(96, 48, "ARM");
     }
 
     _display->display();
