@@ -71,9 +71,10 @@ class UAVNode {
         bool isValid(void);
         bool isArmed(void);
         String gpsFix(void);
-        double lat;
-        double lon;
-        double alt;
+        double lat;                 // GPS Latitude
+        double lon;                 // GPS Longitude
+        double alt;                 // GPS Altitude
+        double positionAltitude;    // Position estimator Altitude in meters
         uint8_t fixType;
         uint8_t hdop;
         uint8_t sats;

@@ -30,6 +30,7 @@
 #define MSP_RAW_GPS     106
 #define MSP_SET_WP      0xD1
 #define MSP_STATUS_EX   150
+#define MSP_ALTITUDE    109
 
 // MSP_COMP_GPS reply
 struct msp_comp_gps_t
@@ -61,6 +62,13 @@ struct MSP_STATUS_EX_t
     uint16_t systemLoad;
     uint16_t armingFlags;
     uint8_t accCalibrationAxis;
+} __attribute__((packed));
+
+struct MSP_ALTITUDE_t
+{
+    int32_t estimatedAltitude;
+    int16_t estimatedVelocity;
+    int32_t baroAltitude;
 } __attribute__((packed));
 
 // MSP_SET_WP command

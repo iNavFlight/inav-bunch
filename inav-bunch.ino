@@ -196,6 +196,17 @@ void loop()
                 lastMspCommunicationTs = millis();
             }
 
+            MSP_ALTITUDE_t mspAltitude;
+            if (msp.request(MSP_ALTITUDE, &mspAltitude, sizeof(mspAltitude)))
+            {
+                uavNode.positionAltitude = mspAltitude.estimatedAltitude / 100.0f;
+
+                uavNode.lastContact = millis();
+                lastMspCommunicationTs = millis();
+            }
+
+            Serial.println(uavNode.positionAltitude);
+
             nextMspReadTaskTs = millis() + TASK_MSP_READ_MS;
         }
 
