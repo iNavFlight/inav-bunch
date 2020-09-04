@@ -67,9 +67,6 @@ QmuTactile button(BUTTON_PIN);
 uint32_t nextLoRaReadTaskTs = 0;
 uint32_t nextMspReadTaskTs = 0;
 
-uint32_t currentBeaconId = 0;
-int8_t currentBeaconIndex = -1;
-
 #define TASK_LORA_READ_MS 2
 #define TASK_MSP_READ_MS 200
 
@@ -247,33 +244,24 @@ void loop()
         qsp.protocolState = QSP_STATE_IDLE;
     }
 
-    if (currentBeaconIndex == -1 && beacons.count() > 0)
+    if (beacons.currentBeaconIndex == -1 && beacons.count() > 0)
     {
-        currentBeaconIndex = 0;
-        currentBeaconId = beacons.get(currentBeaconIndex)->getId();
+        beacons.currentBeaconIndex = 0;
+        beacons.currentBeaconId = beacons.get(beacons.currentBeaconIndex)->getId();
     }
 
     if (!STATE(RUNTIME_STATE_BEACON_LOCKED)) {
         if (button.getState() == TACTILE_STATE_LONG_PRESS) {
             ENABLE_STATE(RUNTIME_STATE_BEACON_LOCKED);
-            DISABLE_STATE(RUNTIME_STATE_SET_WAYPOINT);
         }
     } else {
         if (button.getState() == TACTILE_STATE_LONG_PRESS) {
             DISABLE_STATE(RUNTIME_STATE_BEACON_LOCKED);
-            DISABLE_STATE(RUNTIME_STATE_SET_WAYPOINT);
-        } else if (button.getState() == TACTILE_STATE_SHORT_PRESS) {
-            if (!STATE(RUNTIME_STATE_SET_WAYPOINT)) {
-                ENABLE_STATE(RUNTIME_STATE_SET_WAYPOINT);
-            } else {
-                DISABLE_STATE(RUNTIME_STATE_SET_WAYPOINT);
-            }
         }
     }
 
     if (beacons.count() == 0) {
         DISABLE_STATE(RUNTIME_STATE_BEACON_LOCKED);
-        DISABLE_STATE(RUNTIME_STATE_SET_WAYPOINT);
     }
 
     oledDisplay.loop();

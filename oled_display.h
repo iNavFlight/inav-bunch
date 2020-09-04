@@ -15,10 +15,7 @@ enum txOledPages {
 #define OLED_COL_COUNT 64
 #define OLED_DISPLAY_PAGE_COUNT 2
 
-// extern TinyGPSPlus gps;
 extern Beacons beacons;
-extern int8_t currentBeaconIndex;
-extern uint32_t currentBeaconId;
 extern UAVNode uavNode;
 
 class OledDisplay {

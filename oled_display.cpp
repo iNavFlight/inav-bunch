@@ -54,12 +54,12 @@ void OledDisplay::renderHeader(String title) {
 void OledDisplay::renderPageBeaconList() {
     _display->clear();
 
-    renderHeader("Beacon " + String(currentBeaconIndex + 1) + "/" + String(beacons.count()));
+    renderHeader("Beacon " + String(beacons.currentBeaconIndex + 1) + "/" + String(beacons.count()));
 
     if (beacons.count() > 0) {
         _display->setFont(ArialMT_Plain_10);
 
-        Beacon *beacon = beacons.getBeacon(currentBeaconId);
+        Beacon *beacon = beacons.getBeacon(beacons.currentBeaconId);
         _display->drawString(0, 10, "ID: " + String(beacon->getId(), HEX));
         _display->drawString(70, 10, "RSSI: " + String(beacon->getRssi()));
 
@@ -80,11 +80,11 @@ void OledDisplay::renderPageBeaconList() {
             _display->drawString(0, 20, "Select beacon");
         }
 
-        if (STATE(RUNTIME_STATE_SET_WAYPOINT)) {   
-            _display->drawString(0, 34, "MSP command SET_WP");
-        } else {
-            _display->drawString(0, 34, "MSP command IDLE");
-        }
+        // if (STATE(RUNTIME_STATE_SET_WAYPOINT)) {   
+        //     _display->drawString(0, 34, "MSP command SET_WP");
+        // } else {
+        //     _display->drawString(0, 34, "MSP command IDLE");
+        // }
 
         // if (beacon->hasPos() && gps.satellites.value() > 5) {
         //     _display->setFont(ArialMT_Plain_16);
