@@ -24,9 +24,10 @@ enum qspFrames {
     QSP_FRAME_COUNT
 };
 
+//Length of the payload
 static const uint8_t qspFrameLengths[QSP_FRAME_COUNT] = {
     4, //QSP_FRAME_IDENT
-    12, //QSP_FRAME_COORDS
+    20, //QSP_FRAME_COORDS
     17 //QSP_FRAME_MISC
 };
 

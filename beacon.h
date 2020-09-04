@@ -18,6 +18,9 @@ class Beacon {
         void setLat(double lat);
         void setLon(double lon);
         void setAlt(double alt);
+        void setCourse(int course);
+        void setAction(uint8_t action);
+        void setFlags(uint8_t flags);
         uint8_t getRssi(void);
         void setRssi(uint8_t value);
         uint8_t getSnr(void);
@@ -31,8 +34,11 @@ class Beacon {
         double _lat;
         double _lon;
         double _alt;
+        int _course;  
         uint8_t _rssi;
         uint8_t _snr;
+        uint8_t _flags;
+        uint8_t _action;
         uint32_t _lastContactMillis;
 
 };

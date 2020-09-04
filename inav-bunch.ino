@@ -27,6 +27,11 @@
 #include "uav_node.h"
 #include "runtime_state.h"
 
+#define LORA_TX_POWER 10
+#define LORA_BANDWIDTH 500000
+#define LORA_SPREADING_FACTOR 7
+#define LORA_CODING_RATE 6
+
 #ifdef ARDUINO_ESP32_DEV
 #define LORA_SS_PIN 18
 #define LORA_RST_PIN 14
@@ -54,7 +59,6 @@ OledDisplay oledDisplay(&display);
 
 RadioNode radioNode;
 QspConfiguration_t qsp = {};
-uint8_t bindKey[4] = {0x13, 0x27, 0x42, 0x07};
 
 Beacons beacons;
 
@@ -140,11 +144,15 @@ void setup()
     qsp.onSuccessCallback = onQspSuccess;
     qsp.onFailureCallback = onQspFailure;
 
-    /*
-     * Radio setup
-     */
+    radioNode.configure(
+        LORA_TX_POWER, 
+        LORA_BANDWIDTH, 
+        LORA_SPREADING_FACTOR, 
+        LORA_CODING_RATE
+    );
+
     SPI.begin(SPI_SCK_PIN, SPI_MISO_PIN, SPI_MOSI_PIN, LORA_SS_PIN);
-    LoRa.setSPIFrequency(SPI_FREQUENCY);
+    LoRa.setSPIFrequency(2E6);
     radioNode.init(LORA_SS_PIN, LORA_RST_PIN, LORA_DI0_PIN, NULL);
     radioNode.reset();
     radioNode.canTransmit = true;
@@ -219,20 +227,11 @@ void loop()
         }
     }
 
-    if (radioNode.radioState != RADIO_STATE_TX && nextLoRaReadTaskTs < millis())
-    {
+    if (radioNode.radioState != RADIO_STATE_TX && nextLoRaReadTaskTs < millis()) {
         int packetSize = LoRa.parsePacket();
-        if (packetSize)
-        {
+        if (packetSize) {
             radioNode.bytesToRead = packetSize;
-
-            if (STATE(RUNTIME_STATE_RADIO_LISTEN)) {
-                radioNode.readAndDecode(&qsp, bindKey);
-            } else {
-                //Just flush the data from the buffer
-                LoRa.sleep();
-                LoRa.receive();
-            }
+            radioNode.readAndDecode(&qsp);
         }
 
         nextLoRaReadTaskTs = millis() + TASK_LORA_READ_MS;

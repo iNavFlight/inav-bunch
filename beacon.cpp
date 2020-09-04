@@ -72,3 +72,15 @@ void Beacon::setLastContactMillis(uint32_t value) {
 bool Beacon::hasPos(void) {
     return _hasPos;
 };
+
+void Beacon::setCourse(int course) {
+    _course = course;
+}
+
+void Beacon::setAction(uint8_t action) {
+    _action = action;
+}
+
+void Beacon::setFlags(uint8_t flags) {
+    _flags = flags;
+}
